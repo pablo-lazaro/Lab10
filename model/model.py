@@ -22,7 +22,7 @@ class Model:
 
         # Usa getAllNodes che restituisce solo i paesi che compaiono nei confini
         nodi = DAO.getAllNodes(annoMin, self._idMapCountries)
-        self._graph.add_nodes_from(self._countries)
+        self._graph.add_nodes_from(nodi)
 
         for c in allConfini:
             self._graph.add_edge(c.stato1, c.stato2)

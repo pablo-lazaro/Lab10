@@ -26,7 +26,6 @@ class DAO():
         conn.close()
         return result
 
-    @staticmethod
     def getAllNodes(annoMin, idMap):
         conn = DBConnect.get_connection()
         result = []
