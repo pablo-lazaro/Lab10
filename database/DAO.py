@@ -1,36 +1,68 @@
 from database.DB_connect import DBConnect
+from model.confine import Confine
 from model.country import Country
 
+
 class DAO():
+    def __init__(self):
+        pass
+
     @staticmethod
     def getAllCountries():
         conn = DBConnect.get_connection()
+
+        result = []
+
         cursor = conn.cursor(dictionary=True)
-        # Usiamo i nomi esatti dal tuo screenshot 2
-        query = "SELECT StateAbb, CCode, StateNme FROM country"
+
+        query = """SELECT *
+                    FROM country"""
         cursor.execute(query)
-        res = []
+
         for row in cursor:
-            res.append(Country(**row))
+            result.append(Country(**row))
+
         cursor.close()
         conn.close()
-        return res
+        return result
 
     @staticmethod
-    def getEdges(annoUtente):
+    def getAllNodes(annoMin, idMap):
         conn = DBConnect.get_connection()
+        result = []
         cursor = conn.cursor(dictionary=True)
-        # Tabella contiguity (screenshot 1)
-        # Prendiamo solo gli archi dove state1no < state2no per non duplicarli nel grafo
-        query = """SELECT state1no, state2no
-                   FROM contiguity
-                   WHERE year <= %s 
-                   AND conttype = 1 
-                   AND state1no < state2no"""
-        cursor.execute(query, (annoUtente,))
-        res = []
+
+        query = """select c.state1no as stato1, c.state2no as stato2
+                   from contiguity c
+                   where c.year <= %s \
+                     and c.conttype = 1"""
+        cursor.execute(query, (annoMin,))
+
         for row in cursor:
-            res.append((row['state1no'], row['state2no']))
+            result.append(idMap[row["stato1"]])
+            result.append(idMap[row["stato2"]])  # ← aggiunto
+
         cursor.close()
         conn.close()
-        return res
+        return result
+
+    @staticmethod
+    def getAllConfini(annoMin, idMap):
+        conn = DBConnect.get_connection()
+
+        result = []
+
+        cursor = conn.cursor(dictionary=True)
+
+        query = """select c.state1no as stato1, c.state2no as stato2, c.year as anno
+                   from contiguity c
+                   where c.year <= %s \
+                     and c.conttype = 1"""
+        cursor.execute(query, (annoMin,))
+
+        for row in cursor:
+            result.append(Confine(idMap[row["stato1"]], idMap[row["stato2"]], row["anno"]))
+
+        cursor.close()
+        conn.close()
+        return result  # Ritorno una lista di confini

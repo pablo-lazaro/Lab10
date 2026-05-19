@@ -1,41 +1,67 @@
 import networkx as nx
+
 from database.DAO import DAO
+from model import country
 
 
 class Model:
+
     def __init__(self):
+
         self._graph = nx.Graph()
-        # Carichiamo tutti i paesi una volta sola per velocizzare
-        all_countries = DAO.getAllCountries()
+        self._countries = DAO.getAllCountries() # Lista paesi
+        self._idMapCountries = {}
 
-        # Inizializziamo la mappa vuota
-        self._idMap = {}
+        for c in self._countries:
+            self._idMapCountries[c.CCode] = c
 
-        # Popoliamo la mappa con un ciclo for classico
-        for c in all_countries:
-            codice = c.CCode
-            self._idMap[codice] = c
-
-    def buildGraph(self, anno):
+    def buildGraph(self, annoMin):
         self._graph.clear()
-        edges = DAO.getEdges(anno)
 
-        for s1, s2 in edges:
-            self._graph.add_edge(self._idMap[s1], self._idMap[s2])
+        allConfini = DAO.getAllConfini(annoMin, self._idMapCountries)
 
-    def get_details(self):
-        # Restituisce i dati generali richiesti
-        nodes_count = len(self._graph.nodes)
-        edges_count = len(self._graph.edges)
+        # Usa getAllNodes che restituisce solo i paesi che compaiono nei confini
+        nodi = DAO.getAllNodes(annoMin, self._idMapCountries)
+        self._graph.add_nodes_from(self._countries)
 
-        return nodes_count, edges_count
+        for c in allConfini:
+            self._graph.add_edge(c.stato1, c.stato2)
 
-    def get_sgradi_nodi(self):
+    def addEdges(self, annoMin):
+
+        allConfini = DAO.getAllConfini(annoMin, self._idMapCountries) # lista di oggetti di tipo confine
+
+        # Ho due problemi:
+        # 1) archi diretti e inversi
+        # 2) archi fra confini già filtrati
+
+        for c in allConfini:
+            if c.stato1 in self._graph and c.stato2 in self._graph:
+                # Allora posso aggiungerlo, salto in conteggio pesi di altri es perche non ci sono
+                self._graph.add_edge(c.stato1, c.stato2)
+
+
+    def getGraphDetails(self):
+        return len(self._graph.nodes), len(self._graph.edges)
+
+    def get_stati_confinanti(self):
+        """Restituisce una lista di tuple (Stato, numero_vicini)"""
         risultato = []
-        for n in self._graph.nodes:
-            # Recuperiamo la lista dei vicini del nodo n
-            vicini = list(self._graph.neighbors(n))
-            # Il grado è la lunghezza di questa lista
-            grado = len(vicini)
-            risultato.append((n, grado))
+        for nodo in self._graph.nodes:
+            # Il grado del nodo corrisponde al numero di archi incidenti (stati confinanti)
+            grado = self._graph.degree(nodo)
+            # Puoi usare una proprietà del tuo oggetto Country per il nome, es: nodo.StateName o simile
+            risultato.append((nodo, grado))
         return risultato
+
+    def get_numero_componenti_connesse(self):
+        """Restituisce il numero di componenti connesse del grafo"""
+        return nx.number_connected_components(self._graph)
+
+
+
+
+
+
+
+
